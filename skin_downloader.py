@@ -1,66 +1,71 @@
-import sqlite3
 import tkinter as tk
-from tkinter import ttk
 from tkinter import messagebox
+from tkinter import ttk
+import sqlite3
 from PIL import Image, ImageTk
-import webbrowser
+import requests
 import os
 
-def fetch_skins():
+# Função para baixar a skin
+def download_skin(download_link):
+    try:
+        response = requests.get(download_link)
+        response.raise_for_status()  # Verifica se houve um erro na requisição
+
+        # Salva a skin com o nome correto
+        skin_name = download_link.split("/")[-1]
+        with open(skin_name, 'wb') as f:
+            f.write(response.content)
+        
+        messagebox.showinfo("Download Completo", f"A skin foi baixada: {skin_name}")
+    except Exception as e:
+        messagebox.showerror("Erro", str(e))
+
+# Função para carregar as skins do banco de dados e criar a interface
+def create_gui():
+    # Conectar ao banco de dados
     conn = sqlite3.connect('skins.db')
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM skins")
-    skins = cursor.fetchall()
-    conn.close()
-    return skins
 
-def download_skin(url):
-    webbrowser.open(url)
-
-def create_gui():
-    skins = fetch_skins()
-
+    # Criar a janela principal
     root = tk.Tk()
     root.title("Skin Downloader")
-    root.geometry("400x300")
-    root.resizable(False, False)
 
-    style = ttk.Style()
-    style.configure("Treeview", font=("Helvetica", 10))
-    style.configure("Treeview.Heading", font=("Helvetica", 12, "bold"))
-    style.configure("TButton", font=("Helvetica", 10))
+    # Criar uma árvore para exibir as skins
+    tree = ttk.Treeview(root, columns=('Character', 'Skin'), show='headings')
+    tree.heading('Character', text='Personagem')
+    tree.heading('Skin', text='Skin')
+    tree.pack(fill='both', expand=True)
 
-    frame = ttk.Frame(root, padding="10")
-    frame.pack(fill=tk.BOTH, expand=True)
+    # Carregar as skins do banco de dados
+    cursor.execute("SELECT * FROM skins")
+    skins = cursor.fetchall()
 
-    # Adicionando um Treeview com imagens
-    tree = ttk.Treeview(frame, columns=("Character", "Skin"), show='headings', height=10)
-    tree.heading("Character", text="Character")
-    tree.heading("Skin", text="Skin")
-
-    # Carregar ícones
-    icons = {}
     for skin in skins:
-        # Corrigir o caminho do ícone
-        icon_filename = os.path.basename(skin[3])  # Pega o nome do arquivo da URL
-        icon_path = os.path.join("skins", icon_filename)  # Construindo o caminho corretamente
+        character_name, skin_name, icon_path, download_link = skin[1:]
         
-        # Verificar se o arquivo existe
+        # Verifica se o ícone existe
         if os.path.exists(icon_path):
             img = Image.open(icon_path)
-            img = img.resize((32, 32), Image.ANTIALIAS)  # Redimensionar a imagem
-            icons[skin[1]] = ImageTk.PhotoImage(img)  # Armazenar a imagem
-            
-            # Inserir os dados e a imagem no Treeview
-            tree.insert("", "end", values=(skin[1], skin[2]), tags=(skin[4],))
+            img.thumbnail((50, 50))  # Reduz o tamanho da imagem
+            img = ImageTk.PhotoImage(img)
+
+            # Insere a imagem e os dados na árvore
+            tree.insert('', 'end', values=(character_name, skin_name))
+            tree.image = img  # Manter a referência da imagem
         else:
-            print(f"Ícone não encontrado: {icon_path}")
+            messagebox.showwarning("Imagem Não Encontrada", f"Ícone não encontrado: {icon_path}")
 
-    # Adicionando a imagem ao Treeview
-    for i, skin in enumerate(skins):
-        tree.item(i + 1, image=icons[skin[1]])  # Atualizar o item com a imagem
+    # Adiciona botão de download
+    download_button = tk.Button(root, text="Baixar Skin", command=lambda: download_skin(skins[tree.selection()[0]][4]))
+    download_button.pack()
 
-    def on_tree_select(event):
-        item = tree.selection()[0]
-        url = tree.item(item, "tags")[0]
-     
+    # Inicia o loop da interface gráfica
+    root.mainloop()
+
+    # Fecha a conexão
+    conn.close()
+
+# Chama a função para criar a interface
+if __name__ == "__main__":
+    create_gui()
