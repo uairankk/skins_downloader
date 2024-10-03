@@ -1,47 +1,66 @@
-import tkinter as tk
-from tkinter import messagebox
 import sqlite3
-import requests
+import tkinter as tk
+from tkinter import ttk
+from tkinter import messagebox
+from PIL import Image, ImageTk
+import webbrowser
 import os
 
-def download_skin(download_link, skin_name):
-    response = requests.get(download_link)
-    if response.status_code == 200:
-        with open(skin_name + '.zip', 'wb') as f:
-            f.write(response.content)
-        messagebox.showinfo("Sucesso", f"Skin '{skin_name}' baixada com sucesso!")
-    else:
-        messagebox.showerror("Erro", "Falha ao baixar a skin.")
-
-def get_skins():
+def fetch_skins():
     conn = sqlite3.connect('skins.db')
     cursor = conn.cursor()
-    cursor.execute("SELECT character_name, skin_name, icon_path, download_link FROM skins")
-    return cursor.fetchall()
+    cursor.execute("SELECT * FROM skins")
+    skins = cursor.fetchall()
+    conn.close()
+    return skins
 
-def on_skin_click(character_name, skin_name, download_link):
-    download_skin(download_link, skin_name)
+def download_skin(url):
+    webbrowser.open(url)
 
-def create_skin_buttons(root):
-    skins = get_skins()
-    for character_name, skin_name, icon_path, download_link in skins:
-        frame = tk.Frame(root)
-        frame.pack(pady=10)
+def create_gui():
+    skins = fetch_skins()
 
-        icon = tk.PhotoImage(file=icon_path)  # Carregar o ícone
-        icon_label = tk.Label(frame, image=icon)
-        icon_label.image = icon  # Manter uma referência
-        icon_label.pack(side=tk.LEFT)
-
-        skin_button = tk.Button(frame, text=f"{character_name} - {skin_name}",
-                                command=lambda cn=character_name, sn=skin_name, dl=download_link: on_skin_click(cn, sn, dl))
-        skin_button.pack(side=tk.LEFT)
-
-def main():
     root = tk.Tk()
     root.title("Skin Downloader")
-    create_skin_buttons(root)
-    root.mainloop()
+    root.geometry("400x300")
+    root.resizable(False, False)
 
-if __name__ == "__main__":
-    main()
+    style = ttk.Style()
+    style.configure("Treeview", font=("Helvetica", 10))
+    style.configure("Treeview.Heading", font=("Helvetica", 12, "bold"))
+    style.configure("TButton", font=("Helvetica", 10))
+
+    frame = ttk.Frame(root, padding="10")
+    frame.pack(fill=tk.BOTH, expand=True)
+
+    # Adicionando um Treeview com imagens
+    tree = ttk.Treeview(frame, columns=("Character", "Skin"), show='headings', height=10)
+    tree.heading("Character", text="Character")
+    tree.heading("Skin", text="Skin")
+
+    # Carregar ícones
+    icons = {}
+    for skin in skins:
+        # Corrigir o caminho do ícone
+        icon_filename = os.path.basename(skin[3])  # Pega o nome do arquivo da URL
+        icon_path = os.path.join("skins", icon_filename)  # Construindo o caminho corretamente
+        
+        # Verificar se o arquivo existe
+        if os.path.exists(icon_path):
+            img = Image.open(icon_path)
+            img = img.resize((32, 32), Image.ANTIALIAS)  # Redimensionar a imagem
+            icons[skin[1]] = ImageTk.PhotoImage(img)  # Armazenar a imagem
+            
+            # Inserir os dados e a imagem no Treeview
+            tree.insert("", "end", values=(skin[1], skin[2]), tags=(skin[4],))
+        else:
+            print(f"Ícone não encontrado: {icon_path}")
+
+    # Adicionando a imagem ao Treeview
+    for i, skin in enumerate(skins):
+        tree.item(i + 1, image=icons[skin[1]])  # Atualizar o item com a imagem
+
+    def on_tree_select(event):
+        item = tree.selection()[0]
+        url = tree.item(item, "tags")[0]
+     

@@ -17,8 +17,8 @@ CREATE TABLE IF NOT EXISTS skins (
 
 # Adicionar skins de exemplo ao banco de dados
 skins_data = [
-    ('Jax', 'Divine Staff', 'https://github.com/seu_usuario/skins_downloader/raw/main/skins/jax_icon.png', 'https://github.com/seu_usuario/skins_downloader/raw/main/skins/Jax Divine Staff.fantome'),
-    ('Yasuo', 'NightBringer', 'https://github.com/seu_usuario/skins_downloader/raw/main/skins/yasuo_icon.png', 'https://github.com/seu_usuario/skins_downloader/raw/main/skins/Yasuo NightBringer.fantome')
+    ('Jax', 'Divine Staff', 'https://github.com/wiraskj/skins_downloader/raw/main/skins/jax_icon.png', 'https://github.com/wiraskj/skins_downloader/raw/main/skins/Jax Divine Staff.fantome'),
+    ('Yasuo', 'NightBringer', 'https://github.com/wiraskj/skins_downloader/raw/main/skins/yasuo_icon.png', 'https://github.com/wiraskj/skins_downloader/raw/main/skins/Yasuo NightBringer.fantome')
 ]
 
 cursor.executemany('''
